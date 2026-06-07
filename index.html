@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dolomites Adventure Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Nunito:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#060a14;--bg2:#0c1220;--surface:rgba(56,136,255,0.04);--surface2:rgba(56,136,255,0.07);--surface3:rgba(56,136,255,0.10);--border:rgba(56,136,255,0.10);--border2:rgba(56,136,255,0.18);--text:#d8e6f8;--text-dim:#7a9bbe;--text-hint:#3a5578;--accent:#3b8bff;--accent2:#22d3ee;--accent3:#818cf8;--accent4:#67e8f9;--green:#34d399;--red:#f87171;--yellow:#fbbf24;--radius:16px;--radius-sm:10px;--shadow:0 8px 32px rgba(0,0,0,0.4);--font-display:'Playfair Display',Georgia,serif;--font-body:'Nunito',sans-serif;--font-mono:'JetBrains Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;line-height:1.6}
+body::before{content:'';position:fixed;top:-20%;left:-10%;width:60%;height:60%;background:radial-gradient(ellipse,rgba(59,139,255,0.08),transparent 70%);pointer-events:none;z-index:0}
+.container{max-width:1200px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+.hero{text-align:center;padding:80px 24px 60px;position:relative}
+.hero-badge{display:inline-block;padding:6px 18px;border-radius:20px;background:var(--surface2);border:1px solid var(--border2);font-family:var(--font-mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:20px}
+.hero h1{font-family:var(--font-display);font-size:clamp(36px,6vw,64px);font-weight:800;letter-spacing:-1px;line-height:1.1;margin-bottom:16px}
+.hero h1 .hl{background:linear-gradient(135deg,#3b8bff,#22d3ee,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--text-dim);font-size:18px;max-width:600px;margin:0 auto}
+.mountain-divider{width:100%;height:60px;margin-top:40px;background:linear-gradient(180deg,transparent,var(--bg2))}
+.form-section{background:var(--bg2);padding:60px 0;border-top:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-bottom:32px}
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;transition:border-color 0.3s}
+.form-card:hover{border-color:var(--border2)}
+.form-card label{display:block;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:10px}
+.form-card input,.form-card select{width:100%;padding:12px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:15px;font-family:var(--font-body);outline:none;transition:border-color 0.2s}
+.form-card input:focus,.form-card select:focus{border-color:var(--accent)}
+.form-card select option{background:var(--bg2);color:var(--text)}
+.checkbox-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.checkbox-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:all 0.2s;font-size:13px}
+.checkbox-item:hover{border-color:var(--accent)}
+.checkbox-item.active{border-color:var(--accent);background:rgba(59,139,255,0.1);color:var(--accent)}
+.checkbox-item input{display:none}
+.radio-group{display:flex;flex-wrap:wrap;gap:8px}
+.radio-pill{padding:10px 18px;border-radius:24px;border:1px solid var(--border);background:var(--surface);cursor:pointer;transition:all 0.2s;font-size:13px;font-weight:500}
+.radio-pill:hover{border-color:var(--accent)}
+.radio-pill.active{border-color:var(--accent);background:rgba(59,139,255,0.12);color:var(--accent)}
+.radio-pill input{display:none}
+.generate-btn{display:block;width:100%;max-width:400px;margin:0 auto;padding:18px 40px;border:none;border-radius:50px;background:linear-gradient(135deg,#3b8bff,#22d3ee);color:#fff;font-size:16px;font-weight:700;font-family:var(--font-body);cursor:pointer;transition:all 0.3s;letter-spacing:0.5px;box-shadow:0 4px 24px rgba(59,139,255,0.3)}
+.generate-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(59,139,255,0.4)}
+.dashboard{display:none;padding:60px 0}.dashboard.visible{display:block;animation:fadeUp 0.6s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+@keyframes barGrow{from{width:0}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:none}}
+.section-title{font-family:var(--font-display);font-size:28px;font-weight:700;margin-bottom:8px;letter-spacing:-0.5px}
+.section-sub{color:var(--text-dim);font-size:14px;margin-bottom:28px}
+.section-block{margin-bottom:56px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;transition:all 0.3s}
+.card:hover{border-color:var(--border2)}
+/* Greeting */
+.greeting-card{background:linear-gradient(135deg,rgba(59,139,255,0.12),rgba(34,211,238,0.06));border:1px solid var(--border2);border-radius:var(--radius);padding:36px;margin-bottom:32px;position:relative;overflow:hidden}
+.greeting-card::before{content:'🏔️';position:absolute;top:-10px;right:20px;font-size:80px;opacity:0.12}
+.greeting-card h2{font-family:var(--font-display);font-size:26px;font-weight:700;margin-bottom:8px}
+.greeting-card p{color:var(--text-dim);font-size:15px;line-height:1.7;max-width:700px}
+/* Profile */
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:40px}
+.profile-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px}
+.profile-card h3{font-family:var(--font-display);font-size:18px;margin-bottom:16px}
+.profile-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.profile-row:last-child{border-bottom:none}
+.profile-row .pr-label{color:var(--text-dim)}
+.profile-row .pr-value{font-weight:600;color:var(--text);font-family:var(--font-mono);font-size:12px}
+/* Fit Score */
+.fit-score-grid{display:grid;grid-template-columns:1fr 200px;gap:24px;align-items:start}
+.fit-bars{display:flex;flex-direction:column;gap:12px}
+.fit-row{display:flex;align-items:center;gap:12px}
+.fit-label{font-size:13px;color:var(--text-dim);min-width:130px}
+.fit-track{flex:1;height:10px;background:var(--surface3);border-radius:5px;overflow:hidden}
+.fit-fill{height:100%;border-radius:5px;animation:barGrow 1s ease both}
+.fit-val{font-family:var(--font-mono);font-size:13px;min-width:35px;text-align:right;font-weight:600}
+.fit-total{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px}
+.fit-total .big-score{font-family:var(--font-mono);font-size:56px;font-weight:800;color:var(--accent);line-height:1}
+.fit-total .score-label{font-size:12px;color:var(--text-dim);margin-top:6px;text-transform:uppercase;letter-spacing:1px}
+.fit-total .score-tag{margin-top:10px;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px}
+/* Stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:40px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;transition:transform 0.3s}
+.stat-card:hover{transform:translateY(-3px)}
+.stat-card .stat-icon{font-size:28px;margin-bottom:8px}
+.stat-card .stat-value{font-family:var(--font-mono);font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.stat-card .stat-label{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px}
+/* Flight/Lodging info */
+.flight-info{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.flight-note{font-size:11px;color:var(--text-hint);margin-top:10px;font-style:italic}
+/* Month */
+.month-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.month-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden}
+.month-card.recommended{border-color:var(--accent);box-shadow:0 0 20px rgba(59,139,255,0.12)}
+.month-card.recommended::after{content:'★ BEST';position:absolute;top:12px;right:12px;font-size:9px;font-weight:700;letter-spacing:1px;background:var(--accent);color:#fff;padding:3px 8px;border-radius:4px}
+.month-card h4{font-size:14px;font-weight:700;margin-bottom:14px}
+.score-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.score-label{font-size:11px;color:var(--text-dim);min-width:85px}
+.score-track{flex:1;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px;animation:barGrow 0.8s ease both}
+.score-val{font-family:var(--font-mono);font-size:11px;color:var(--text-dim);min-width:20px;text-align:right}
+/* Budget */
+.budget-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.budget-breakdown{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px}
+.budget-item{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}
+.budget-item:last-child{border-bottom:none}
+.budget-item .bi-left{display:flex;align-items:center;gap:12px}
+.budget-item .bi-icon{font-size:20px}.budget-item .bi-name{font-size:14px;font-weight:500}
+.budget-item .bi-amount{font-family:var(--font-mono);font-size:15px;font-weight:600;color:var(--accent)}
+.budget-chart{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.donut-container{position:relative;width:200px;height:200px;margin-bottom:20px}
+.donut-container canvas{width:200px;height:200px}
+.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.donut-center .total{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--accent)}
+.donut-center .total-label{font-size:11px;color:var(--text-dim)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim)}
+.legend-dot{width:10px;height:10px;border-radius:3px}
+/* Group */
+.group-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.group-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;transition:all 0.3s}
+.group-card.best{border-color:var(--accent2);box-shadow:0 0 20px rgba(34,211,238,0.12)}
+.group-card.best::before{content:'💰 BEST VALUE';display:block;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--accent2);margin-bottom:8px}
+.group-card .gc-travelers{font-size:32px;margin-bottom:4px}
+.group-card .gc-label{font-size:12px;color:var(--text-dim);margin-bottom:12px}
+.group-card .gc-total{font-family:var(--font-mono);font-size:14px;color:var(--text-dim);margin-bottom:4px}
+.group-card .gc-pp{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--accent)}
+/* What-If */
+.whatif-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.whatif-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.whatif-card h4{font-size:13px;font-weight:700;margin-bottom:10px}
+.whatif-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 0}
+.whatif-row .wf-diff{font-family:var(--font-mono);font-weight:600;font-size:12px}
+.whatif-row .wf-diff.save{color:var(--green)}.whatif-row .wf-diff.extra{color:var(--red)}
+/* Insights */
+.insight-list{display:flex;flex-direction:column;gap:10px}
+.insight-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px 20px;font-size:13px;color:var(--text-dim);display:flex;align-items:flex-start;gap:12px}
+.insight-item .ii-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+/* Itinerary */
+.itin-list{display:flex;flex-direction:column;gap:14px}
+.itin-card{display:grid;grid-template-columns:80px 1fr auto;gap:20px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px;transition:all 0.3s;animation:slideIn 0.5s ease both}
+.itin-card:hover{border-color:var(--border2);transform:translateX(4px)}
+.itin-day{text-align:center;padding:12px;border-radius:var(--radius-sm);background:var(--surface2)}
+.itin-day .day-num{font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--accent)}
+.itin-day .day-label{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px}
+.itin-info h4{font-size:16px;font-weight:700;margin-bottom:4px}
+.itin-info p{font-size:13px;color:var(--text-dim);line-height:1.5}
+.itin-info .interest-tags{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.itin-info .itag{font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(59,139,255,0.1);color:var(--accent);font-weight:600}
+.itin-scores{display:flex;flex-direction:column;gap:6px;min-width:130px}
+.itin-score{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-dim)}
+.itin-score .dots{display:flex;gap:3px}
+.itin-score .dot{width:8px;height:8px;border-radius:50%;background:var(--surface3)}
+.itin-score .dot.filled{background:var(--accent)}
+/* Destinations */
+.dest-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.dest-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all 0.3s}
+.dest-card:hover{transform:translateY(-4px);border-color:var(--border2)}
+.dest-img{height:160px;background-size:cover;background-position:center;position:relative}
+.dest-img .dest-emoji{position:absolute;bottom:10px;right:14px;font-size:28px;background:rgba(0,0,0,0.4);border-radius:8px;padding:4px 8px;backdrop-filter:blur(4px)}
+.dest-body{padding:20px}
+.dest-body h4{font-family:var(--font-display);font-size:18px;margin-bottom:10px}
+.dest-meta{display:flex;flex-wrap:wrap;gap:8px}
+.dest-tag{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:var(--surface2);color:var(--text-dim)}
+/* Photo/Rec grids */
+.photo-grid,.rec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.photo-card,.rec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
+.photo-card h4{font-size:14px;font-weight:700;margin-bottom:14px}
+.photo-item{padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-dim)}
+.photo-item:last-child{border-bottom:none}
+.rec-card .rec-icon{font-size:28px;margin-bottom:10px}
+.rec-card h4{font-size:14px;font-weight:700;margin-bottom:6px}
+.rec-card p{font-size:13px;color:var(--text-dim);line-height:1.6}
+/* Executive report */
+.exec-report{background:linear-gradient(135deg,rgba(59,139,255,0.06),rgba(34,211,238,0.03));border:1px solid var(--border2);border-radius:var(--radius);padding:36px}
+.exec-report h3{font-family:var(--font-display);font-size:22px;margin-bottom:20px}
+.exec-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.exec-item{background:rgba(59,139,255,0.04);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px}
+.exec-item h5{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:6px}
+.exec-item p{font-size:13px;color:var(--text-dim);line-height:1.5}
+/* Export btn */
+.export-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:rgba(59,139,255,0.12);border:1px solid var(--border2);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:var(--font-body);text-decoration:none;margin-top:20px}
+.export-btn:hover{background:rgba(59,139,255,0.2);transform:translateY(-1px)}
+/* About/Footer */
+.about-section{margin-top:60px;padding:48px 0;border-top:1px solid var(--border)}
+.about-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px;max-width:700px}
+.about-card h3{font-family:var(--font-display);font-size:20px;margin-bottom:14px}
+.about-card p{font-size:13px;color:var(--text-dim);line-height:1.7}
+.footer{text-align:center;padding:40px 24px;border-top:1px solid var(--border);font-size:13px;color:var(--text-hint)}
+.footer a{color:var(--accent);text-decoration:none}
+.footer .name{color:var(--text-dim);font-weight:600}
+.back-top{position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;display:none;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:none;z-index:100;box-shadow:var(--shadow)}
+.back-top.visible{display:flex}
+@media(max-width:768px){.hero{padding:48px 16px 32px}.hero h1{font-size:32px}.form-grid,.budget-grid,.profile-grid,.fit-score-grid{grid-template-columns:1fr}.checkbox-grid{grid-template-columns:repeat(2,1fr)}.itin-card{grid-template-columns:60px 1fr}.itin-scores{display:none}.month-grid{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.checkbox-grid{grid-template-columns:1fr}.month-grid{grid-template-columns:1fr}}
+@media print{body{background:#fff;color:#111}.card,.stat-card,.greeting-card,.exec-report,.profile-card,.flight-info,.budget-breakdown,.budget-chart,.month-card,.group-card,.itin-card,.dest-card,.rec-card,.photo-card,.whatif-card,.insight-item,.exec-item,.fit-total{background:#f8f8f8;border-color:#ddd;color:#111}.section-title,.greeting-card h2{color:#111}.stat-card .stat-value,.donut-center .total,.group-card .gc-pp,.fit-total .big-score{color:#2563eb}.form-section,.hero,.back-top,.generate-btn,.export-btn,.footer,.map-section{display:none}.dashboard{display:block!important;padding:20px 0}.section-sub,.profile-row .pr-label,.score-label,.budget-item .bi-name,.text-dim,.itin-info p,.rec-card p,.exec-item p,.insight-item,.photo-item,.flight-note{color:#555}}
+/* Map */
+.map-container{width:100%;height:480px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);margin-bottom:16px;position:relative;z-index:2}
+.map-container .leaflet-popup-content-wrapper{background:var(--bg2);color:var(--text);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow)}
+.map-container .leaflet-popup-tip{background:var(--bg2)}
+.map-container .leaflet-popup-content{font-family:var(--font-body);font-size:13px;margin:12px 16px}
+.map-container .leaflet-popup-content h4{font-family:var(--font-display);font-size:15px;margin-bottom:4px;color:var(--text)}
+.map-container .leaflet-popup-content p{color:var(--text-dim);font-size:12px;line-height:1.5;margin:0}
+.map-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--text-dim)}
+.map-legend-item{display:flex;align-items:center;gap:6px}
+.map-legend-dot{width:12px;height:12px;border-radius:50%;border:2px solid}
+</style>
+</head>
+<body>
+<div class="hero">
+  <div class="hero-badge">✦ Travel Planning Dashboard</div>
+  <h1>Plan Your<br><span class="hl">Dolomites Adventure</span></h1>
+  <p>Calculate costs, compare months, and build a personalized itinerary for an unforgettable Italian Alps experience.</p>
+  <div class="mountain-divider"></div>
+</div>
+<div class="form-section" id="formSection">
+  <div class="container">
+    <div class="form-grid">
+      <div class="form-card"><label>Traveler Name</label><input type="text" id="travelerName" placeholder="El Patrón / La Patrona" value="El Patrón"></div>
+      <div class="form-card"><label>Departure City</label><input type="text" id="departureCity" placeholder="e.g. Boston" value="Boston"></div>
+      <div class="form-card"><label>Number of Travelers</label><input type="number" id="numTravelers" min="1" max="20" value="8"></div>
+      <div class="form-card"><label>Trip Length (Days)</label><input type="number" id="tripDays" min="3" max="21" value="8"></div>
+      <div class="form-card"><label>Travel Month</label><div class="radio-group" id="monthGroup">
+        <label class="radio-pill"><input type="radio" name="month" value="late-june"> Late June</label>
+        <label class="radio-pill active"><input type="radio" name="month" value="early-july" checked> Early July</label>
+        <label class="radio-pill"><input type="radio" name="month" value="late-july"> Late July</label>
+        <label class="radio-pill"><input type="radio" name="month" value="early-sept"> Early Sept</label>
+        <label class="radio-pill"><input type="radio" name="month" value="mid-sept"> Mid Sept</label>
+      </div></div>
+      <div class="form-card"><label>Travel Style</label><div class="radio-group" id="styleGroup">
+        <label class="radio-pill"><input type="radio" name="style" value="budget"> Budget</label>
+        <label class="radio-pill active"><input type="radio" name="style" value="balanced" checked> Balanced</label>
+        <label class="radio-pill"><input type="radio" name="style" value="premium"> Premium</label>
+      </div></div>
+      <div class="form-card"><label>Primary Interests</label><div class="checkbox-grid" id="interestsGrid">
+        <label class="checkbox-item active"><input type="checkbox" value="photography" checked> 📷 Photography</label>
+        <label class="checkbox-item active"><input type="checkbox" value="scenic" checked> 🏔️ Scenic Views</label>
+        <label class="checkbox-item"><input type="checkbox" value="food"> 🍝 Food</label>
+        <label class="checkbox-item"><input type="checkbox" value="adventure"> ⛰️ Adventure</label>
+        <label class="checkbox-item"><input type="checkbox" value="relaxation"> 🧘 Relaxation</label>
+        <label class="checkbox-item"><input type="checkbox" value="nightlife"> 🌙 Nightlife</label>
+      </div></div>
+      <div class="form-card"><label>Fitness Level</label><div class="radio-group" id="fitnessGroup">
+        <label class="radio-pill"><input type="radio" name="fitness" value="low"> Low</label>
+        <label class="radio-pill active"><input type="radio" name="fitness" value="moderate" checked> Moderate</label>
+        <label class="radio-pill"><input type="radio" name="fitness" value="high"> High</label>
+      </div></div>
+      <div class="form-card"><label>Vehicle Preference</label><div class="radio-group" id="vehicleGroup">
+        <label class="radio-pill active"><input type="radio" name="vehicle" value="van" checked> 🚐 9-Pass Van</label>
+        <label class="radio-pill"><input type="radio" name="vehicle" value="suv"> 🚙 Two SUVs</label>
+        <label class="radio-pill"><input type="radio" name="vehicle" value="public"> 🚌 Public Transit</label>
+      </div></div>
+      <div class="form-card"><label>Accommodation</label><div class="radio-group" id="accomGroup">
+        <label class="radio-pill active"><input type="radio" name="accom" value="chalet" checked> 🏡 Shared Chalet</label>
+        <label class="radio-pill"><input type="radio" name="accom" value="airbnb"> 🏠 Airbnb</label>
+        <label class="radio-pill"><input type="radio" name="accom" value="hotel"> 🏨 Hotel</label>
+      </div></div>
+    </div>
+    <button class="generate-btn" onclick="generatePlan()">✦ Generate Trip Plan</button>
+  </div>
+</div>
+<div class="dashboard" id="dashboard">
+  <div class="container">
+    <div id="greetingCard" class="greeting-card"></div>
+    <div id="profileSection"></div>
+    <div id="fitScoreSection"></div>
+    <div id="statGrid" class="stat-grid"></div>
+    <div id="flightSection"></div>
+    <div id="lodgingSection"></div>
+    <div class="section-block"><div class="section-title">📅 Month Comparison</div><div class="section-sub">Compare travel months across key factors</div><div id="monthGrid" class="month-grid"></div></div>
+    <div class="section-block"><div class="section-title">💰 Budget Calculator</div><div class="section-sub">Estimated costs based on 2026 travel data — prices fluctuate, book early</div><div id="budgetGrid" class="budget-grid"></div></div>
+    <div class="section-block"><div class="section-title">👥 Group Cost Analysis</div><div class="section-sub">See how group size affects per-person cost</div><div id="groupGrid" class="group-grid"></div></div>
+    <div id="whatifSection"></div>
+    <div id="insightSection"></div>
+    <div class="section-block"><div class="section-title">🗺️ Recommended Itinerary</div><div class="section-sub" id="itinSub"></div><div id="itinList" class="itin-list"></div></div>
+    <div class="section-block" id="mapBlock" style="display:none"><div class="section-title">🗺️ Interactive Route Map</div><div class="section-sub">Your complete Dolomites route — click markers for details</div><div id="tripMap" class="map-container"></div><div class="map-legend" id="mapLegend"></div></div>
+    <div class="section-block"><div class="section-title">⛰️ Scenic Destination Ranking</div><div class="section-sub">Top Dolomites locations ranked by experience</div><div id="destGrid" class="dest-grid"></div></div>
+    <div id="interestSection"></div>
+    <div class="section-block"><div class="section-title">📸 Photography Planner</div><div class="section-sub">Best spots for every type of shot</div><div id="photoGrid" class="photo-grid"></div></div>
+    <div class="section-block"><div class="section-title">🧠 Smart Recommendations</div><div class="section-sub">Personalized tips based on your selections</div><div id="recGrid" class="rec-grid"></div></div>
+    <div id="execSection"></div>
+    <div class="about-section"><div class="about-card"><h3>About This Project</h3><p>The Dolomites Adventure Planner is a personalized travel consulting dashboard that dynamically calculates trip costs, generates fit scores, and produces tailored itineraries. All costs are sourced from 2026 data. Built as a portfolio project by Darwin Marmolejos.</p></div></div>
+  </div>
+</div>
+<div class="footer"><p>Created by <span class="name">Darwin Marmolejos</span></p><p style="margin-top:4px">GitHub Portfolio Project · <a href="https://github.com/Darewiin" target="_blank">github.com/Darewiin</a></p></div>
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.querySelectorAll('.radio-group').forEach(g=>{g.querySelectorAll('.radio-pill').forEach(p=>{p.addEventListener('click',()=>{g.querySelectorAll('.radio-pill').forEach(x=>x.classList.remove('active'));p.classList.add('active')})})});
+document.querySelectorAll('.checkbox-item').forEach(c=>{c.addEventListener('click',function(e){e.preventDefault();this.classList.toggle('active');const cb=this.querySelector('input');if(cb)cb.checked=this.classList.contains('active')})});
+window.addEventListener('scroll',()=>{document.getElementById('backTop').classList.toggle('visible',window.scrollY>400)});
+function gv(n){const e=document.querySelector(`input[name="${n}"]:checked`);return e?e.value:''}
+function gc(id){return Array.from(document.querySelectorAll(`#${id} .checkbox-item.active`)).map(c=>c.querySelector('input').value)}
+
+const MONTHS={'late-june':{label:'Late June',crowds:5,weather:7,photo:9,cost:7,scenic:8,fm:1.08},'early-july':{label:'Early July',crowds:7,weather:8,photo:9,cost:8,scenic:9,fm:1.12},'late-july':{label:'Late July',crowds:9,weather:8,photo:8,cost:9,scenic:8,fm:1.18},'early-sept':{label:'Early Sept',crowds:4,weather:8,photo:10,cost:5,scenic:10,fm:0.92},'mid-sept':{label:'Mid Sept',crowds:3,weather:7,photo:9,cost:4,scenic:9,fm:0.88}};
+const AR={chalet:50,airbnb:70,hotel:120};
+const AI={chalet:{label:'Shared Chalet',range:[35,80],icon:'🏡',desc:'Large mountain chalets split among your group',links:[{n:'Airbnb',u:'https://www.airbnb.com/s/Val-Gardena--Italy/homes?adults=8'},{n:'Booking.com',u:'https://www.booking.com/searchresults.html?ss=Val+Gardena'},{n:'VRBO',u:'https://www.vrbo.com/search?destination=Val+Gardena+Italy'}]},airbnb:{label:'Airbnb',range:[50,110],icon:'🏠',desc:'Private apartments with kitchen access',links:[{n:'Airbnb',u:'https://www.airbnb.com/s/Dolomites--Italy/homes?adults=8'},{n:'VRBO',u:'https://www.vrbo.com/search?destination=Dolomites+Italy'},{n:'Booking.com',u:'https://www.booking.com/searchresults.html?ss=Dolomites'}]},hotel:{label:'Hotel',range:[90,180],icon:'🏨',desc:'3-4 star hotels — breakfast usually included',links:[{n:'Booking.com',u:'https://www.booking.com/searchresults.html?ss=Val+Gardena&nflt=class%3D3'},{n:'Expedia',u:'https://www.expedia.com/Hotel-Search?destination=Val+Gardena+Italy'},{n:'Hotels.com',u:'https://www.hotels.com/search?destination=Val+Gardena'}]}};
+const VC={van:150,suv:140,public:20};
+const SM={budget:0.8,balanced:1,premium:1.45};
+const FL={budget:{price:520,range:[420,650],label:'Budget (2 stops)'},balanced:{price:640,range:[580,800],label:'Economy (1 stop)'},premium:{price:1450,range:[1200,1700],label:'Business/First'}};
+
+const ITIN=[
+  {day:1,loc:'Venice',desc:'Arrive Venice Marco Polo. Transfer to hotel. Evening canal walk and welcome dinner.',sc:7,ph:8,ef:2,cost:120,tags:['food','scenic','relaxation','nightlife']},
+  {day:2,loc:'Transfer to Dolomites',desc:'Morning in Venice, scenic drive to Val Gardena. Check into accommodation.',sc:8,ph:7,ef:3,cost:80,tags:['scenic','photography']},
+  {day:3,loc:'Seceda',desc:'Cable car to Seceda (2,519m). Iconic ridgeline, golden hour sunrise photography.',sc:10,ph:10,ef:6,cost:65,tags:['photography','scenic','adventure']},
+  {day:4,loc:'Alpe di Siusi',desc:"Europe's largest alpine meadow. Wildflower hiking with Sassolungo backdrop.",sc:9,ph:9,ef:4,cost:50,tags:['scenic','photography','relaxation']},
+  {day:5,loc:'Tre Cime di Lavaredo',desc:'Three peaks circuit (9.5km). Most famous hike in the Alps. 360° panoramas.',sc:10,ph:10,ef:8,cost:55,tags:['adventure','photography','scenic']},
+  {day:6,loc:'Lago di Braies',desc:'Turquoise alpine lake. Rowboat rentals. Best at sunrise before crowds.',sc:9,ph:10,ef:3,cost:45,tags:['photography','scenic','relaxation']},
+  {day:7,loc:'Passo Giau + Cinque Torri',desc:'Legendary mountain pass. Short hike to five towers with Tofana views.',sc:10,ph:9,ef:5,cost:60,tags:['scenic','photography','adventure']},
+  {day:8,loc:'Departure',desc:'Farewell breakfast. Transfer to Venice Marco Polo for flights home.',sc:5,ph:4,ef:2,cost:90,tags:['food']},
+];
+const DEST=[
+  {name:'Seceda',emoji:'🏔️',bg:'linear-gradient(135deg,#1a3152,#3b8bff)',img:'images/seceda.jpg',sc:10,ph:10,diff:'Moderate',time:'4-5 hrs',desc:'Iconic ridgeline at 2,519m with jagged peaks.'},
+  {name:'Alpe di Siusi',emoji:'🌿',bg:'linear-gradient(135deg,#059669,#22d3ee)',img:'images/alpe-di-siusi.jpg',sc:9,ph:9,diff:'Easy',time:'3-4 hrs',desc:"Europe's largest alpine meadow."},
+  {name:'Tre Cime',emoji:'⛰️',bg:'linear-gradient(135deg,#4338ca,#818cf8)',img:'images/tre-cime.jpg',sc:10,ph:10,diff:'Hard',time:'5-6 hrs',desc:'Three peaks — most famous hike in the Alps.'},
+  {name:'Lago di Braies',emoji:'🏞️',bg:'linear-gradient(135deg,#0369a1,#22d3ee)',img:'images/lago-di-braies.jpg',sc:9,ph:10,diff:'Easy',time:'2-3 hrs',desc:'Turquoise lake for sunrise photography.'},
+  {name:'Passo Giau',emoji:'🛤️',bg:'linear-gradient(135deg,#1e40af,#3b82f6)',img:'images/passo-giau.jpg',sc:10,ph:9,diff:'Easy',time:'1-2 hrs',desc:'Mountain pass at 2,236m with panoramic views.'},
+  {name:'Cinque Torri',emoji:'🗼',bg:'linear-gradient(135deg,#6d28d9,#a78bfa)',img:'images/cinque-torri.jpg',sc:9,ph:9,diff:'Moderate',time:'3-4 hrs',desc:'Five rock towers with WWI history.'},
+];
+const PHD={sunrise:['Seceda ridgeline (5:30 AM)','Lago di Braies boat house (5:00 AM)','Alpe di Siusi meadows (5:45 AM)','Tre Cime Rifugio Locatelli (5:15 AM)'],sunset:['Passo Giau roadside (8:30 PM)','Cinque Torri platforms (8:15 PM)','Seceda cable car station (8:45 PM)','Val Gardena viewpoints (8:30 PM)'],drone:['Alpe di Siusi meadows','Lago di Braies overhead','Passo Giau serpentine road','Seceda ridgeline flyover'],instagram:['Lago di Braies boat dock','Seceda ridgeline silhouette','Tre Cime circuit viewpoint','Passo Giau road bend']};
+const ID={food:{title:'🍝 Food & Dining',tips:['Canederli (bread dumplings) at any mountain rifugio','Rifugio Emilio Comici on Sassolungo for food with a view','Ortisei center for apple strudel and spätzle','Gewürztraminer and Lagrein wine at Bolzano cantinas','Rifugio half-board (€50-70pp) includes dinner + breakfast','Venice: cicchetti at All\'Arco or Cantina Do Mori'],ba:15},adventure:{title:'⛰️ Adventure',tips:['Via Ferrata delle Trincee (€35 gear rental)','Paragliding from Alpe di Siusi (€150-200)','E-bike rentals in Val Gardena (€45-65/day)','Canyoning in Val di Fassa (€60-80pp)','Rock climbing at Cinque Torri (€90pp with guide)','Sunrise hike to Seceda — depart 4:00 AM'],ba:25},relaxation:{title:'🧘 Relaxation',tips:['QC Terme Dolomiti thermal baths (€55 day pass)','Alpe di Siusi: flat meadow walks, no intense hiking','Chalets with private sauna (+€20-30/night)','Skip Tre Cime if low fitness — spa day instead','Hugo cocktails (elderflower + prosecco) for aperitivo','Schedule a rest day mid-trip'],ba:10},nightlife:{title:'🌙 Nightlife',tips:['Venice: Campo Santa Margherita bars (Spritz €3-5)','Ortisei: Café Adler or Tubladel','Club Moritzino mountaintop parties in Corvara','Bolzano (1hr): cocktail bars and live music','Most Dolomites towns quiet after 10 PM','Budget €20-40/night for drinks'],ba:20},photography:{title:'📷 Photography',tips:['Golden hour: 5:00-6:30 AM and 7:30-9:00 PM in July','Polarizing filter for lake shots (Lago di Braies)','Italy allows sub-250g drones without registration','Milky way: Passo Giau parking (low light pollution)','Seceda ridgeline — worth the 4 AM wake-up','16-35mm wide + 70-200mm telephoto recommended'],ba:0},scenic:{title:'🏔️ Scenic',tips:['Cortina → Passo Giau: most beautiful road in Europe','Sunset at Cinque Torri: Tofana turns pink','Funicular from Ortisei to Alpe di Siusi (cars banned 9-5)','Tre Cime: go counterclockwise for dramatic reveal','Lago di Braies: before 7 AM or after 5 PM','Val di Funes + St. Johann church — classic postcard'],ba:0}};
+
+function generatePlan(){
+  const name=document.getElementById('travelerName').value||'El Patrón';
+  const city=document.getElementById('departureCity').value||'Boston';
+  const tv=parseInt(document.getElementById('numTravelers').value)||8;
+  const days=parseInt(document.getElementById('tripDays').value)||8;
+  const month=gv('month')||'early-july';
+  const style=gv('style')||'balanced';
+  const vehicle=gv('vehicle')||'van';
+  const accom=gv('accom')||'chalet';
+  const interests=gc('interestsGrid');
+  const fitness=gv('fitness')||'moderate';
+  const md=MONTHS[month],sm=SM[style],fd=FL[style],ai=AI[accom];
+
+  const flightCost=Math.round(fd.price*md.fm);
+  const lodgingCost=Math.round(AR[accom]*(days-1)*sm);
+  const transportCost=vehicle==='public'?Math.round(VC.public*days*sm):Math.round((VC[vehicle]*days)/tv);
+  const foodBase=interests.includes('food')?65:50;
+  const foodCost=Math.round(foodBase*days*sm);
+  const intAdd=interests.reduce((s,i)=>s+(ID[i]?.ba||0),0)/Math.max(interests.length,1);
+  const actCost=Math.round((30+intAdd)*days*sm);
+  const totalPP=flightCost+lodgingCost+transportCost+foodCost+actCost;
+  const totalGroup=totalPP*tv;
+  const bm=Object.entries(MONTHS).sort((a,b)=>(b[1].scenic+b[1].photo-b[1].crowds-b[1].cost)-(a[1].scenic+a[1].photo-a[1].crowds-a[1].cost))[0];
+  const intNames=interests.map(i=>({photography:'Photography',scenic:'Scenic Views',food:'Food & Dining',adventure:'Adventure',relaxation:'Relaxation',nightlife:'Nightlife'}[i])).filter(Boolean);
+  const travelStyle=interests.includes('photography')&&interests.includes('adventure')?'Adventure Photography':interests.includes('photography')&&interests.includes('scenic')?'Scenic Photography':interests.includes('adventure')?'Mountain Explorer':interests.includes('food')?'Culinary Explorer':interests.includes('relaxation')?'Alpine Retreat':'Mountain Discovery';
+
+  // FIT SCORES
+  const photoFit=interests.includes('photography')?Math.min(md.photo*10,100):60;
+  const scenicFit=md.scenic*10;
+  const budgetEff=style==='budget'?90:style==='balanced'?75:55;
+  const comfortLvl=accom==='hotel'?90:accom==='airbnb'?72:60;
+  const crowdAvoid=Math.max(0,(10-md.crowds)*11);
+  const overallFit=Math.round((photoFit+scenicFit+budgetEff+comfortLvl+crowdAvoid)/5);
+  const fitColor=overallFit>=80?'var(--green)':overallFit>=60?'var(--accent)':'var(--yellow)';
+  const fitTag=overallFit>=85?'EXCELLENT MATCH':overallFit>=70?'GREAT MATCH':overallFit>=55?'GOOD MATCH':'FAIR MATCH';
+  const confidence=Math.min(95,overallFit+Math.round(interests.length*2));
+
+  // GREETING
+  document.getElementById('greetingCard').innerHTML=`<h2>${name}, your Dolomites adventure awaits! 🏔️</h2>
+    <p>Based on your group of <strong>${tv} travelers</strong>, <strong>${md.label}</strong> timing, and focus on <strong>${intNames.join(', ')}</strong>,
+    ${month===bm[0]?'you\'ve picked the optimal month — great instinct!':'we recommend <strong>'+bm[1].label+'</strong> for the best overall value and scenery.'}
+    Your <strong>${style}</strong> travel style with <strong>${ai.label.toLowerCase()}</strong> lodging keeps the trip at <strong>$${totalPP.toLocaleString()}/person</strong>.
+    ${interests.includes('food')?'<br>🍝 Food focus detected — dining budget boosted and restaurant picks added.':''}
+    ${interests.includes('adventure')?'<br>⛰️ Adventure mode — Via Ferrata, paragliding, and e-bike options included.':''}</p>`;
+
+  // PROFILE
+  document.getElementById('profileSection').innerHTML=`<div class="section-block"><div class="profile-grid">
+    <div class="profile-card"><h3>👤 Traveler Profile</h3>
+      ${[['Traveler',name],['Travel Style',travelStyle],['Group Size',tv+' Travelers'],['Travel Window',md.label],['Trip Length',days+' Days'],['Fitness Level',fitness.charAt(0).toUpperCase()+fitness.slice(1)],['Budget Category',style.charAt(0).toUpperCase()+style.slice(1)],['Accommodation',ai.label],['Transport',{van:'9-Passenger Van',suv:'Two SUVs',public:'Public Transit'}[vehicle]]].map(r=>`<div class="profile-row"><span class="pr-label">${r[0]}</span><span class="pr-value">${r[1]}</span></div>`).join('')}
+    </div>
+    <div class="profile-card"><h3>🎯 Experience Profile</h3>
+      ${[['Recommended Experience',travelStyle],['Primary Focus',intNames[0]||'General'],['Travel Confidence',confidence+'%'],['Destinations Covered','6 iconic locations'],['Estimated Daily Budget','$'+Math.round(totalPP/days)+'/day'],['Budget per Activity Day','$'+Math.round(actCost/days)+'/day'],['Value Rating',overallFit>=80?'⭐⭐⭐⭐⭐':overallFit>=60?'⭐⭐⭐⭐':'⭐⭐⭐']].map(r=>`<div class="profile-row"><span class="pr-label">${r[0]}</span><span class="pr-value">${r[1]}</span></div>`).join('')}
+    </div>
+  </div></div>`;
+
+  // FIT SCORE
+  const fitItems=[{l:'Photography Fit',v:photoFit,c:'#3b8bff'},{l:'Scenic Value',v:scenicFit,c:'#22d3ee'},{l:'Budget Efficiency',v:budgetEff,c:'#34d399'},{l:'Comfort Level',v:comfortLvl,c:'#818cf8'},{l:'Crowd Avoidance',v:crowdAvoid,c:'#67e8f9'},{l:'Overall Experience',v:overallFit,c:fitColor}];
+  document.getElementById('fitScoreSection').innerHTML=`<div class="section-block">
+    <div class="section-title">📊 Trip Fit Score</div><div class="section-sub">How well this trip matches your preferences</div>
+    <div class="fit-score-grid"><div class="fit-bars">
+      ${fitItems.map(f=>`<div class="fit-row"><span class="fit-label">${f.l}</span><div class="fit-track"><div class="fit-fill" style="width:${f.v}%;background:${f.c}"></div></div><span class="fit-val" style="color:${f.c}">${f.v}%</span></div>`).join('')}
+    </div>
+    <div class="fit-total"><div class="big-score">${overallFit}</div><div class="score-label">Trip Match Score</div><div class="score-tag" style="background:${fitColor};color:#000">${fitTag}</div></div>
+    </div></div>`;
+
+  // STATS
+  document.getElementById('statGrid').innerHTML=`
+    <div class="stat-card"><div class="stat-icon">✈️</div><div class="stat-value">$${totalPP.toLocaleString()}</div><div class="stat-label">Per Person</div></div>
+    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-value">$${totalGroup.toLocaleString()}</div><div class="stat-label">Group Total</div></div>
+    <div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value">${days} Days</div><div class="stat-label">Trip Length</div></div>
+    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-value">${overallFit}%</div><div class="stat-label">Trip Match</div></div>`;
+
+  // FLIGHTS
+  const sq=encodeURIComponent(city+' to Venice Italy');
+  document.getElementById('flightSection').innerHTML=`<div class="section-block"><div class="section-title">✈️ Flights: ${city} → Venice (VCE)</div>
+    <div class="section-sub">No direct flights — all routes have 1-2 layovers (Lisbon, Zurich, Paris, Rome, Dublin, Frankfurt)</div>
+    <div class="flight-info"><div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">${fd.label} · Round-trip estimate for ${md.label}</div>
+      <div style="font-family:var(--font-mono);font-size:36px;font-weight:700;color:var(--accent)">$${flightCost}</div>
+      <div style="font-size:13px;color:var(--text-hint)">per person · range $${fd.range[0]}–$${fd.range[1]}</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:20px 0">
+        <a href="https://www.google.com/travel/flights?q=${sq}" target="_blank" class="export-btn" style="margin:0">🔍 Google Flights</a>
+        <a href="https://www.expedia.com/Flights-Search?leg1=from:BOS,to:VCE&mode=search" target="_blank" class="export-btn" style="margin:0">✈️ Expedia</a>
+        <a href="https://www.booking.com/flights/index.html" target="_blank" class="export-btn" style="margin:0">🏷️ Booking.com</a></div>
+      <div class="flight-note">⚠️ Estimates based on 2026 airline data — actual fares change daily. Book 6-8 weeks ahead.</div></div></div>`;
+
+  // LODGING
+  const npp=Math.round(AR[accom]*sm);
+  document.getElementById('lodgingSection').innerHTML=`<div class="section-block"><div class="section-title">${ai.icon} Lodging: ${ai.label}</div>
+    <div class="section-sub">${ai.desc}</div>
+    <div class="flight-info"><div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px">${days-1} nights · ${style} · ${tv} travelers</div>
+      <div style="font-family:var(--font-mono);font-size:36px;font-weight:700;color:var(--accent)">$${npp}<span style="font-size:16px;color:var(--text-dim)">/pp/night</span></div>
+      <div style="font-size:13px;color:var(--text-hint)">range $${Math.round(ai.range[0]*sm)}–$${Math.round(ai.range[1]*sm)}/pp/night · total: $${lodgingCost}/pp</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:20px 0">
+        ${ai.links.map(l=>`<a href="${l.u}" target="_blank" class="export-btn" style="margin:0">${l.n}</a>`).join('')}</div>
+      <div class="flight-note">⚠️ Estimates based on 2026 Dolomites data. Prices vary by location, dates, availability. Book early — summer fills fast.</div></div></div>`;
+
+  // MONTHS
+  const mc={crowds:'#f87171',weather:'#3b8bff',photo:'#22d3ee',cost:'#a78bfa',scenic:'#34d399'};
+  document.getElementById('monthGrid').innerHTML=Object.entries(MONTHS).map(([k,m])=>`<div class="month-card ${k===bm[0]?'recommended':''}"><h4>${m.label}</h4>
+    ${['crowds','weather','photo','cost','scenic'].map(c=>`<div class="score-row"><span class="score-label">${c.charAt(0).toUpperCase()+c.slice(1)}</span><div class="score-track"><div class="score-fill" style="width:${m[c]*10}%;background:${mc[c]}"></div></div><span class="score-val">${m[c]}</span></div>`).join('')}</div>`).join('');
+
+  // BUDGET
+  const bi=[{i:'✈️',n:`Flights (${fd.label} RT)`,a:flightCost},{i:'🏠',n:`Lodging (${days-1} nights)`,a:lodgingCost},{i:'🚗',n:`Transport (${days} days)`,a:transportCost},{i:'🍽️',n:`Food (${days} days)`,a:foodCost},{i:'🎟️',n:`Activities (${days} days)`,a:actCost}];
+  const cc=['#3b8bff','#22d3ee','#34d399','#a78bfa','#818cf8'];
+  document.getElementById('budgetGrid').innerHTML=`<div class="budget-breakdown">${bi.map(b=>`<div class="budget-item"><div class="bi-left"><span class="bi-icon">${b.i}</span><span class="bi-name">${b.n}</span></div><span class="bi-amount">$${b.a.toLocaleString()}</span></div>`).join('')}
+    <div class="budget-item" style="border-top:2px solid var(--accent);margin-top:8px;padding-top:16px"><div class="bi-left"><span class="bi-icon">💰</span><span class="bi-name" style="font-weight:700">Total Per Person</span></div><span class="bi-amount" style="font-size:20px">$${totalPP.toLocaleString()}</span></div></div>
+    <div class="budget-chart"><div class="donut-container"><canvas id="dc" width="200" height="200"></canvas><div class="donut-center"><div class="total">$${totalPP.toLocaleString()}</div><div class="total-label">per person</div></div></div>
+    <div class="legend">${bi.map((b,i)=>`<div class="legend-item"><div class="legend-dot" style="background:${cc[i]}"></div>${b.n.split('(')[0].trim()}</div>`).join('')}</div></div>`;
+  setTimeout(()=>{const c=document.getElementById('dc');if(!c)return;const x=c.getContext('2d');let a=-Math.PI/2;bi.forEach((b,i)=>{const s=(b.a/totalPP)*Math.PI*2;x.beginPath();x.arc(100,100,80,a,a+s);x.strokeStyle=cc[i];x.lineWidth=24;x.stroke();a+=s})},100);
+
+  // GROUP
+  document.getElementById('groupGrid').innerHTML=[6,7,8,9].map(n=>{const tp=vehicle==='public'?Math.round(VC.public*days*sm):Math.round((VC[vehicle]*days)/n);const pp=flightCost+lodgingCost+tp+foodCost+actCost;return`<div class="group-card ${n===9?'best':''}"><div class="gc-travelers">${n}</div><div class="gc-label">travelers</div><div class="gc-total">Group: $${(pp*n).toLocaleString()}</div><div class="gc-pp">$${pp.toLocaleString()}/pp</div></div>`}).join('');
+
+  // WHAT-IF
+  const altSept=Math.round(FL[style].price*MONTHS['early-sept'].fm)+Math.round(AR[accom]*(days-1)*sm)+transportCost+foodCost+actCost;
+  const altJuly=Math.round(FL[style].price*MONTHS['late-july'].fm)+Math.round(AR[accom]*(days-1)*sm)+transportCost+foodCost+actCost;
+  const altAccoms={chalet:'hotel',airbnb:'chalet',hotel:'airbnb'};const altAc=altAccoms[accom];
+  const altAccomCost=Math.round(AR[altAc]*(days-1)*sm)+flightCost+transportCost+foodCost+actCost;
+  const altVehicles={van:'suv',suv:'van',public:'van'};const altVh=altVehicles[vehicle];
+  const altVhCost=flightCost+lodgingCost+(altVh==='public'?Math.round(VC.public*days*sm):Math.round((VC[altVh]*days)/tv))+foodCost+actCost;
+  function diffBadge(curr,alt){const d=alt-curr;return d<0?`<span class="wf-diff save">Save $${Math.abs(d)}</span>`:`<span class="wf-diff extra">+$${d}</span>`}
+
+  document.getElementById('whatifSection').innerHTML=`<div class="section-block"><div class="section-title">🔄 What-If Analysis</div>
+    <div class="section-sub">See how different choices affect your budget</div><div class="whatif-grid">
+    <div class="whatif-card"><h4>📅 Different Month</h4>
+      <div class="whatif-row"><span>Current: ${md.label}</span><span class="wf-diff" style="color:var(--text)">$${totalPP}/pp</span></div>
+      <div class="whatif-row"><span>If Early September</span>${diffBadge(totalPP,altSept)}</div>
+      <div class="whatif-row"><span>If Late July</span>${diffBadge(totalPP,altJuly)}</div></div>
+    <div class="whatif-card"><h4>🏠 Different Lodging</h4>
+      <div class="whatif-row"><span>Current: ${ai.label}</span><span class="wf-diff" style="color:var(--text)">$${totalPP}/pp</span></div>
+      <div class="whatif-row"><span>If ${AI[altAc].label}</span>${diffBadge(totalPP,altAccomCost)}</div></div>
+    <div class="whatif-card"><h4>🚗 Different Transport</h4>
+      <div class="whatif-row"><span>Current: ${{van:'9-Pass Van',suv:'Two SUVs',public:'Public Transit'}[vehicle]}</span><span class="wf-diff" style="color:var(--text)">$${totalPP}/pp</span></div>
+      <div class="whatif-row"><span>If ${{van:'9-Pass Van',suv:'Two SUVs',public:'Public Transit'}[altVh]}</span>${diffBadge(totalPP,altVhCost)}</div></div>
+    <div class="whatif-card"><h4>👥 Different Group Size</h4>
+      ${[6,7,8,9].filter(n=>n!==tv).map(n=>{const tp=vehicle==='public'?Math.round(VC.public*days*sm):Math.round((VC[vehicle]*days)/n);const pp=flightCost+lodgingCost+tp+foodCost+actCost;return`<div class="whatif-row"><span>If ${n} travelers</span>${diffBadge(totalPP,pp)}</div>`}).join('')}</div>
+    </div></div>`;
+
+  // INSIGHTS
+  const pcts=bi.map(b=>({n:b.n.split('(')[0].trim(),p:Math.round(b.a/totalPP*100)})).sort((a,b)=>b.p-a.p);
+  const septSave=totalPP-altSept;
+  const ins=[
+    `Your largest expense is <strong>${pcts[0].n}</strong> at ${pcts[0].p}% of your budget.`,
+    `<strong>Transportation</strong> represents only ${pcts.find(p=>p.n==='Transport').p}% of total cost — good value for ${tv} travelers.`,
+    septSave>0?`Choosing <strong>Early September</strong> over ${md.label} would save ~$${septSave}/person (${Math.round(septSave/totalPP*100)}% less).`:`Your chosen month is already the most cost-efficient option.`,
+    accom==='chalet'?`A <strong>shared chalet</strong> provides the highest value for groups of ${tv} — ${Math.round((AR.hotel-AR.chalet)/AR.hotel*100)}% cheaper than hotels.`:accom==='hotel'?`Hotels include breakfast, saving ~$15/day on food — partially offsetting the higher nightly rate.`:`Airbnb with kitchen access can save $20-30/day on meals vs restaurants only.`,
+    vehicle==='van'?`The <strong>9-passenger van</strong> splits to just $${transportCost}/pp for ${days} days — cheapest group option.`:`Consider a 9-passenger van to save $${Math.max(0,transportCost-Math.round(VC.van*days/tv))}/pp on transport.`,
+    `At <strong>${tv} travelers</strong>, your per-person daily cost is $${Math.round(totalPP/days)} — ${tv>=8?'excellent group economics':'increasing to 8-9 travelers would reduce costs further'}.`,
+  ];
+  document.getElementById('insightSection').innerHTML=`<div class="section-block"><div class="section-title">💡 Traveler Insights</div>
+    <div class="section-sub">Data-driven observations about your trip</div>
+    <div class="insight-list">${ins.map(i=>`<div class="insight-item"><span class="ii-icon">→</span><span>${i}</span></div>`).join('')}</div></div>`;
+
+  // ITINERARY
+  document.getElementById('itinSub').textContent=`${days}-day ${travelStyle.toLowerCase()} adventure from ${city}`;
+  const tagIcons={photography:'📷',scenic:'🏔️',food:'🍝',adventure:'⛰️',relaxation:'🧘',nightlife:'🌙'};
+  document.getElementById('itinList').innerHTML=ITIN.slice(0,days).map((it,i)=>{const c=Math.round(it.cost*sm);const mt=it.tags.filter(t=>interests.includes(t));return`<div class="itin-card" style="animation-delay:${i*0.08}s"><div class="itin-day"><div class="day-num">${it.day}</div><div class="day-label">Day</div></div><div class="itin-info"><h4>${it.loc}</h4><p>${it.desc}</p>${mt.length?`<div class="interest-tags">${mt.map(t=>`<span class="itag">${tagIcons[t]||''} ${t}</span>`).join('')}</div>`:''}</div><div class="itin-scores"><div class="itin-score"><span>🏔️ Scenic</span><div class="dots">${dots(it.sc)}</div></div><div class="itin-score"><span>📷 Photo</span><div class="dots">${dots(it.ph)}</div></div><div class="itin-score"><span>💪 Effort</span><div class="dots">${dots(it.ef)}</div></div><div class="itin-score"><span>💰 ~$${c}</span></div></div></div>`}).join('');
+
+  // DESTINATIONS
+  document.getElementById('destGrid').innerHTML=DEST.map(d=>`<div class="dest-card"><div class="dest-img" style="background:${d.bg};background-image:url('${d.img}'),${d.bg};background-size:cover;background-position:center"><span class="dest-emoji">${d.emoji}</span></div><div class="dest-body"><h4>${d.name}</h4><p style="font-size:12px;color:var(--text-dim);margin-bottom:10px">${d.desc}</p><div class="dest-meta"><span class="dest-tag">🏔️ ${d.sc}/10</span><span class="dest-tag">📷 ${d.ph}/10</span><span class="dest-tag">💪 ${d.diff}</span><span class="dest-tag">⏱️ ${d.time}</span></div></div></div>`).join('');
+
+  // MAP
+  const mapPoints=[
+    {lat:45.4408,lng:12.3155,name:'Venice',day:1,desc:'Arrival & departure city',color:'#3b8bff',icon:'✈️'},
+    {lat:46.5581,lng:11.6756,name:'Val Gardena (Base)',day:2,desc:'Home base — Ortisei area',color:'#22d3ee',icon:'🏠'},
+    {lat:46.6011,lng:11.7275,name:'Seceda',day:3,desc:'2,519m ridgeline — cable car access',color:'#f59e0b',icon:'🏔️'},
+    {lat:46.5422,lng:11.6278,name:'Alpe di Siusi',day:4,desc:"Europe's largest alpine meadow",color:'#34d399',icon:'🌿'},
+    {lat:46.6185,lng:12.3018,name:'Tre Cime di Lavaredo',day:5,desc:'Iconic three peaks circuit (9.5km)',color:'#818cf8',icon:'⛰️'},
+    {lat:46.6942,lng:12.0856,name:'Lago di Braies',day:6,desc:'Turquoise alpine lake',color:'#67e8f9',icon:'🏞️'},
+    {lat:46.4847,lng:12.0536,name:'Passo Giau',day:7,desc:'Mountain pass at 2,236m',color:'#a78bfa',icon:'🛤️'},
+    {lat:46.5108,lng:12.0758,name:'Cinque Torri',day:7,desc:'Five rock towers with WWI history',color:'#f472b6',icon:'🗼'},
+  ];
+  document.getElementById('mapBlock').style.display='block';
+  const mapEl=document.getElementById('tripMap');
+  if(window._tripMap){window._tripMap.remove();window._tripMap=null}
+  if(typeof L==='undefined'){document.getElementById('mapBlock').style.display='none';console.log('Leaflet not loaded — map skipped');} else {
+  try{
+    const map=L.map('tripMap',{scrollWheelZoom:false}).setView([46.45,12.0],9);
+    window._tripMap=map;
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+      attribution:'© <a href="https://www.openstreetmap.org/">OSM</a> © <a href="https://carto.com/">CARTO</a>',
+      maxZoom:17
+    }).addTo(map);
+    const routeCoords=[];
+    mapPoints.forEach((p,i)=>{
+      const marker=L.circleMarker([p.lat,p.lng],{radius:10,fillColor:p.color,color:'#fff',weight:2,opacity:0.9,fillOpacity:0.85}).addTo(map);
+      marker.bindPopup(`<h4>${p.icon} Day ${p.day}: ${p.name}</h4><p>${p.desc}</p>`);
+      if(i===0)marker.openPopup();
+      routeCoords.push([p.lat,p.lng]);
+    });
+    // Draw route lines
+    const orderedRoute=[mapPoints[0],mapPoints[1],mapPoints[2],mapPoints[3],mapPoints[4],mapPoints[5],mapPoints[6],mapPoints[7],mapPoints[0]];
+    L.polyline(orderedRoute.map(p=>[p.lat,p.lng]),{color:'#3b8bff',weight:2,opacity:0.5,dashArray:'8,8'}).addTo(map);
+    // Legend
+    document.getElementById('mapLegend').innerHTML=mapPoints.map(p=>`<div class="map-legend-item"><div class="map-legend-dot" style="background:${p.color};border-color:${p.color}"></div>Day ${p.day}: ${p.name}</div>`).join('');
+    setTimeout(()=>map.invalidateSize(),300);
+  }catch(e){console.log('Map error:',e)}}
+
+  // INTEREST SECTION
+  const ai2=interests.filter(i=>ID[i]);
+  document.getElementById('interestSection').innerHTML=ai2.length?`<div class="section-block"><div class="section-title">🎯 Based On Your Interests</div><div class="section-sub">Personalized tips for: ${intNames.join(', ')}</div><div class="rec-grid">${ai2.map(i=>{const d=ID[i];return`<div class="rec-card"><h4>${d.title}</h4>${d.tips.map(t=>`<p style="margin-bottom:6px;font-size:12px">→ ${t}</p>`).join('')}${d.ba>0?`<p style="margin-top:8px;font-size:11px;color:var(--accent)">+$${d.ba}/day added to activity budget</p>`:''}</div>`}).join('')}</div></div>`:'';
+
+  // PHOTOGRAPHY
+  document.getElementById('photoGrid').innerHTML=[{t:'🌅 Best Sunrise',k:'sunrise'},{t:'🌇 Best Sunset',k:'sunset'},{t:'🚁 Best Drone',k:'drone'},{t:'📱 Best Instagram',k:'instagram'}].map(s=>`<div class="photo-card"><h4>${s.t}</h4>${PHD[s.k].map(p=>`<div class="photo-item">→ ${p}</div>`).join('')}</div>`).join('');
+
+  // RECOMMENDATIONS
+  document.getElementById('recGrid').innerHTML=[
+    {i:'📅',t:'Best Month',p:`${bm[1].label} offers the best balance.${interests.includes('photography')?' September light is exceptional for photography.':''}`},
+    {i:'✈️',t:'Flight Strategy',p:`${style==='budget'?'2-stop routes save ~$120/pp. TAP via Lisbon is the best budget 1-stop.':style==='premium'?'Delta One/Lufthansa Business ($1,200-1,700) — lie-flat seats for arriving rested.':'1-stop via TAP, SWISS, or Air France is the best value at $580-800.'} Compare on Google Flights.`},
+    {i:'🏠',t:'Lodging',p:`${accom==='chalet'?'Shared chalet splits to ~$'+npp+'/pp/night. Kitchen access saves on meals.':accom==='airbnb'?'2 Airbnbs keeps the group together with kitchen savings.':'Hotels include breakfast, saving ~$15/day.'}`},
+    {i:'🚗',t:'Transport',p:`${vehicle==='van'?'9-pass van from Venice (~$150/day) splits to $'+transportCost+'/pp total. Book via AutoEurope.':vehicle==='suv'?'Two SUVs give flexibility for group splitting.':'SAD buses + Mobilcard (€32/7 days) for unlimited rides.'}`},
+    {i:'💪',t:'Fitness',p:`${fitness==='high'?'Add Via Ferrata and full Tre Cime circuit.':fitness==='moderate'?'Good balance of Tre Cime (hard) with Alpe di Siusi (easy).':'Focus on cable car viewpoints and lakeside walks.'}`},
+  ].map(r=>`<div class="rec-card"><div class="rec-icon">${r.i}</div><h4>${r.t}</h4><p>${r.p}</p></div>`).join('');
+
+  // EXECUTIVE REPORT
+  document.getElementById('execSection').innerHTML=`<div class="section-block"><div class="exec-report">
+    <h3>📋 Executive Trip Summary</h3>
+    <div class="exec-grid">
+      <div class="exec-item"><h5>Trip Overview</h5><p>${days}-day ${travelStyle.toLowerCase()} trip for ${tv} travelers departing ${city}. ${md.label} timing with ${style} budget. Overall match score: ${overallFit}%.</p></div>
+      <div class="exec-item"><h5>Budget Summary</h5><p>Total per person: <strong>$${totalPP.toLocaleString()}</strong>. Group total: $${totalGroup.toLocaleString()}. Largest expense: ${pcts[0].n} (${pcts[0].p}%). Daily rate: $${Math.round(totalPP/days)}/pp.</p></div>
+      <div class="exec-item"><h5>Recommended Base</h5><p>Val Gardena (Ortisei/Selva) — central location with cable car access to Seceda and Alpe di Siusi, restaurants, and mountain access.</p></div>
+      <div class="exec-item"><h5>Transport Plan</h5><p>${{van:'9-passenger van rental from Venice Marco Polo. ~$150/day splits to $'+transportCost+'/pp for '+days+' days.',suv:'Two SUV rentals for group flexibility. ~$70/day each.',public:'Public transit via SAD buses and Mobilcard (€32/7 days).'}[vehicle]}</p></div>
+      <div class="exec-item"><h5>Top Destinations</h5><p>Seceda (10/10 scenic), Tre Cime (10/10 photo), Lago di Braies (10/10 photo), Passo Giau (10/10 scenic). All accessible within 1-2 hour drives from Val Gardena.</p></div>
+      <div class="exec-item"><h5>Key Savings</h5><p>${accom==='chalet'?'Shared chalet saves '+Math.round((AR.hotel-AR.chalet)/AR.hotel*100)+'% vs hotels.':''} ${vehicle==='van'?'Van splits transport cost efficiently.':''} ${month==='early-sept'||month==='mid-sept'?'September pricing saves 10-15% on flights and lodging.':'Consider September for 10-15% savings.'}</p></div>
+    </div>
+    <button class="export-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+  </div></div>`;
+
+  document.getElementById('dashboard').classList.add('visible');
+  setTimeout(()=>document.getElementById('dashboard').scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+function dots(s){let h='';for(let i=0;i<5;i++)h+=`<div class="dot ${i<Math.round(s/2)?'filled':''}"></div>`;return h}
+</script>
+</body>
+</html>
